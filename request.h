@@ -9,6 +9,7 @@
 #include <QtCore/QMetaObject>
 #include <QtNetwork/QUdpSocket>
 
+#include "address.h"
 
 class RequestHandler;
 
@@ -18,19 +19,17 @@ class Request: public QObject
 private:
     QStringList m_args;
     RequestHandler *m_handler;
-    QHostAddress m_addr;
-    quint16 m_port;
+    Address m_addr;
     bool m_outgoing;
     quint16 m_nonce;
 
 public:
-    Request(QHostAddress addr, quint16 port, bool outgoing, QString message, RequestHandler *handler);
+    Request(Address addr, bool outgoing, QString message, RequestHandler *handler);
     bool isAcknowledge();
     QString getType();
     QString getMessage();
 
-    QHostAddress getAddr() { return m_addr; };
-    quint16 getPort() { return m_port; };
+    Address getAddress() { return m_addr; };
     bool isOutgoing() { return m_outgoing; };
     quint16 getNonce() { return m_nonce; };
 
@@ -46,19 +45,19 @@ private:
     QSettings m_settings;
     QUdpSocket m_sock;
     QList<Request*> m_requests;
-    QMap<QPair<QString, quint16>, quint16> m_nonce;
+    QMap<Address, quint16> m_nonce;
 
 public:
     RequestHandler(QObject *parent);
-    quint16 getNonce(QHostAddress addr, quint16 port);
+    quint16 getNonce(Address addr);
 
 private slots:
     void readDatagrams();
 
 public slots:
-    Request *findRequest(QHostAddress addr, quint16 port, quint16 nonce);
+    Request *findRequest(Address addr, quint16 nonce);
     void sendRequest(Request *request);
-    void makeRequest(QHostAddress addr, quint16 port, bool outgoing, QString message);
+    void makeRequest(Address addr, bool outgoing, QString message);
     void addRequest(Request *request);
     void removeRequest(Request *request);
 };

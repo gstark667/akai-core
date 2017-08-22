@@ -2,13 +2,12 @@
 
 #include <iostream>
 
-Request::Request(QHostAddress addr, quint16 port, bool outgoing, QString message, RequestHandler *handler)
+Request::Request(Address addr, bool outgoing, QString message, RequestHandler *handler)
 {
     QString nonce = message.section(":", 0, 0);
     QString front = message.section(':', 1, 1);
     QString back = message.section(':', 2);
     m_addr = addr;
-    m_port = port;
     m_outgoing = outgoing;
     m_nonce = nonce.toUInt();
     m_args = front.trimmed().split(" ");
@@ -47,7 +46,7 @@ void Request::process()
     QList<Request*> responses;
     if (this->getType().compare("register") == 0)
     {
-        responses.append(new Request(m_addr, m_port, true, QString::number(m_nonce) + ":ack", m_handler));
+        responses.append(new Request(m_addr, true, QString::number(m_nonce) + ":ack", m_handler));
     }
 
     for (size_t i = 0; i < responses.size(); ++i)
@@ -74,31 +73,30 @@ RequestHandler::RequestHandler(QObject *parent): QObject(parent)
         m_settings.setValue("port", 6667);
     m_sock.bind(QHostAddress("127.0.0.1"), quint16(m_settings.value("port").toUInt()));
     connect(&m_sock, &QUdpSocket::readyRead, this, &RequestHandler::readDatagrams);
-    makeRequest(QHostAddress("127.0.0.1"), 6666, true, "register");
+    makeRequest(Address{QHostAddress("127.0.0.1"), 6666}, true, "register");
 }
 
-quint16 RequestHandler::getNonce(QHostAddress addr, quint16 port)
+quint16 RequestHandler::getNonce(Address addr)
 {
-    QPair<QString, quint16> pair(addr.toString(), port);
-    if (!m_nonce.contains(pair))
-        m_nonce[pair] = 0;
-    return m_nonce[pair]++;
+    if (!m_nonce.contains(addr))
+        m_nonce[addr] = 0;
+    return m_nonce[addr]++;
 }
 
 void RequestHandler::readDatagrams()
 {
     QByteArray datagram;
-    QHostAddress sender;
+    QHostAddress senderAddr;
     quint16 senderPort;
     while (m_sock.hasPendingDatagrams())
     {
 	    datagram.resize(m_sock.pendingDatagramSize());
-	    m_sock.readDatagram(datagram.data(), datagram.size(), &sender, &senderPort);
+	    m_sock.readDatagram(datagram.data(), datagram.size(), &senderAddr, &senderPort);
         QString message = QString(datagram.data());
-        Request *request = new Request(sender, senderPort, false, message, this);
+        Request *request = new Request(Address{senderAddr, senderPort}, false, message, this);
         if (request->isAcknowledge())
         {
-            Request *request2 = findRequest(request->getAddr(), request->getPort(), request->getNonce());
+            Request *request2 = findRequest(request->getAddress(), request->getNonce());
             if (request2 != nullptr)
                 request2->acknowledge(request);
             std::cout << "got ack" << std::endl;
@@ -112,12 +110,12 @@ void RequestHandler::readDatagrams()
     }
 }
 
-Request *RequestHandler::findRequest(QHostAddress addr, quint16 port, quint16 nonce)
+Request *RequestHandler::findRequest(Address addr, quint16 nonce)
 {
     for (size_t i = 0; i < m_requests.size(); ++i)
     {
         Request *request = m_requests.at(i);
-        if (request->getAddr() == addr && request->getPort() == port && request->getNonce() == nonce)
+        if (request->getAddress() == addr && request->getNonce() == nonce)
             return request;
     }
     return nullptr;
@@ -126,16 +124,16 @@ Request *RequestHandler::findRequest(QHostAddress addr, quint16 port, quint16 no
 void RequestHandler::sendRequest(Request *request)
 {
     std::cout << "sending request: " << request->getMessage().toStdString() << std::endl;
-    m_sock.writeDatagram(request->getMessage().toUtf8(), request->getAddr(), request->getPort());
+    m_sock.writeDatagram(request->getMessage().toUtf8(), request->getAddress().host, request->getAddress().port);
 }
 
-void RequestHandler::makeRequest(QHostAddress addr, quint16 port, bool outgoing, QString message)
+void RequestHandler::makeRequest(Address addr, bool outgoing, QString message)
 {
     Request *request;
     if (outgoing)
-        request = new Request(addr, port, outgoing, this->getNonce(addr, port) + ":" + message, this);
+        request = new Request(addr, outgoing, this->getNonce(addr) + ":" + message, this);
     else
-        request = new Request(addr, port, outgoing, message, this);
+        request = new Request(addr, outgoing, message, this);
     QMetaObject::invokeMethod(request, "process", Qt::QueuedConnection);
     this->addRequest(request);
 }

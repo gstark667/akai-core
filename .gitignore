@@ -1,0 +1,6 @@
+akai-whale
+moc_*
+*.o
+*.swp
+Makefile
+.qmake.stash

@@ -6,7 +6,8 @@ TARGET = akai-whale
 TEMPLATE = app
 
 
-SOURCES += main.cpp\
+SOURCES += main.cpp \
+        address.cpp \
         request.cpp
 
 HEADERS  += request.h
