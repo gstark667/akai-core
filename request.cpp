@@ -53,6 +53,11 @@ void Request::process()
     else if (getType().compare("key") == 0 && m_args.size() == 3)
     {
         std::cout << "importing key: " << m_args.at(1).toStdString() << ": " << m_args.at(2).toStdString() << std::endl;
+        QCA::PGPKey newKey = QCA::PGPKey::fromString(m_args.at(2));
+        if (newKey.fingerprint().toLower() == m_args.at(1).toLower())
+            std::cout << "fingerprint is correct" << std::endl;
+        else
+            std::cout << "fingerprints do not match: " << m_args.at(1).toStdString() << ": " << newKey.fingerprint().toStdString() << std::endl;
     }
 
     for (size_t i = 0; i < responses.size(); ++i)
