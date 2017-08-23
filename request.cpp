@@ -45,9 +45,14 @@ void Request::process()
 
     std::cout << "processing" << std::endl;
     QList<Request*> responses;
-    if (this->getType().compare("register") == 0)
+    if (getType().compare("register") == 0 && m_args.size() == 2)
     {
         responses.append(new Request(m_addr, true, QString::number(m_nonce) + ":ack", m_handler));
+        std::cout << m_args.at(1).toStdString() << std::endl;
+    }
+    else if (getType().compare("key") == 0 && m_args.size() == 3)
+    {
+        std::cout << "importing key: " << m_args.at(1).toStdString() << ": " << m_args.at(2).toStdString() << std::endl;
     }
 
     for (size_t i = 0; i < responses.size(); ++i)
@@ -84,7 +89,7 @@ RequestHandler::RequestHandler(QObject *parent): QObject(parent)
     foreach(const QCA::KeyStoreEntry kse, pgpks.entryList())
     {
         QString text = kse.name() + ":" + kse.pgpPublicKey().fingerprint();
-        std::cout << "Key Store: " << text.toStdString() << std::endl;
+        std::cout << "Key Store: " << text.toStdString() << ": " << kse.pgpPublicKey().toString().toStdString() << std::endl;
     }
     if (!m_settings.contains("port"))
         m_settings.setValue("port", 6667);
