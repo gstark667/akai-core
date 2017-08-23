@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-Request::Request(Address addr, bool outgoing, QString message, RequestHandler *handler)
+Request::Request(Address addr, bool outgoing, QString message, RequestHandler *handler, DummyRequest callback)
 {
     QString nonce = message.section(":", 0, 0);
     QString front = message.section(':', 1, 1);
@@ -16,6 +16,7 @@ Request::Request(Address addr, bool outgoing, QString message, RequestHandler *h
     for (size_t i = 0; i < m_args.size(); ++i)
         std::cout << m_args.at(i).toStdString() << std::endl;
     m_handler = handler;
+    m_callback = callback;
 }
 
 bool Request::isAcknowledge()
@@ -67,8 +68,18 @@ QString Request::getMessage()
     return message + ":" + m_args.at(m_args.size() - 1);
 }
 
+DummyRequest Request::toDummy()
+{
+    return DummyRequest{m_addr, m_nonce, false};
+}
+
+
 RequestHandler::RequestHandler(QObject *parent): QObject(parent)
 {
+    QCA::KeyStoreManager::start();
+    QStringList list = m_ksm.keyStores();
+    foreach(const QString &item, list)
+        std::cout << "Key Store: " << item.toStdString() << std::endl;
     if (!m_settings.contains("port"))
         m_settings.setValue("port", 6667);
     m_sock.bind(QHostAddress("127.0.0.1"), quint16(m_settings.value("port").toUInt()));
@@ -96,7 +107,7 @@ void RequestHandler::readDatagrams()
         Request *request = new Request(Address{senderAddr, senderPort}, false, message, this);
         if (request->isAcknowledge())
         {
-            Request *request2 = findRequest(request->getAddress(), request->getNonce());
+            Request *request2 = findRequest(request->toDummy());
             if (request2 != nullptr)
                 request2->acknowledge(request);
             std::cout << "got ack" << std::endl;
@@ -110,12 +121,12 @@ void RequestHandler::readDatagrams()
     }
 }
 
-Request *RequestHandler::findRequest(Address addr, quint16 nonce)
+Request *RequestHandler::findRequest(DummyRequest dumbReq)
 {
     for (size_t i = 0; i < m_requests.size(); ++i)
     {
         Request *request = m_requests.at(i);
-        if (request->getAddress() == addr && request->getNonce() == nonce)
+        if (dumbReq.addr == request->getAddress() && dumbReq.nonce == request->getNonce())
             return request;
     }
     return nullptr;

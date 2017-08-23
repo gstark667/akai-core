@@ -8,10 +8,18 @@
 #include <QtCore/QPair>
 #include <QtCore/QMetaObject>
 #include <QtNetwork/QUdpSocket>
+#include <QtCrypto/QtCrypto>
 
 #include "address.h"
 
 class RequestHandler;
+
+struct DummyRequest
+{
+    Address addr;
+    quint16 nonce;
+    bool isEmpty = true;
+};
 
 class Request: public QObject
 {
@@ -22,9 +30,10 @@ private:
     Address m_addr;
     bool m_outgoing;
     quint16 m_nonce;
+    DummyRequest m_callback;
 
 public:
-    Request(Address addr, bool outgoing, QString message, RequestHandler *handler);
+    Request(Address addr, bool outgoing, QString message, RequestHandler *handler, DummyRequest callback=DummyRequest{});
     bool isAcknowledge();
     QString getType();
     QString getMessage();
@@ -32,6 +41,8 @@ public:
     Address getAddress() { return m_addr; };
     bool isOutgoing() { return m_outgoing; };
     quint16 getNonce() { return m_nonce; };
+
+    DummyRequest toDummy();
 
 public slots:
     void acknowledge(Request *response);
@@ -46,6 +57,7 @@ private:
     QUdpSocket m_sock;
     QList<Request*> m_requests;
     QMap<Address, quint16> m_nonce;
+    QCA::KeyStoreManager m_ksm;
 
 public:
     RequestHandler(QObject *parent);
@@ -55,7 +67,7 @@ private slots:
     void readDatagrams();
 
 public slots:
-    Request *findRequest(Address addr, quint16 nonce);
+    Request *findRequest(DummyRequest dumbReq);
     void sendRequest(Request *request);
     void makeRequest(Address addr, bool outgoing, QString message);
     void addRequest(Request *request);
