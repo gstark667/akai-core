@@ -55,7 +55,7 @@ void Request::process()
         std::cout << "importing key: " << m_args.at(1).toStdString() << ": " << m_args.at(2).toStdString() << std::endl;
         QCA::PGPKey newKey = QCA::PGPKey::fromString(m_args.at(2));
         if (newKey.fingerprint().toLower() == m_args.at(1).toLower())
-            std::cout << "fingerprint is correct" << std::endl;
+            std::cout << "fingerprint is correct: " << m_handler->writeEntry(newKey).toStdString() << std::endl;
         else
             std::cout << "fingerprints do not match: " << m_args.at(1).toStdString() << ": " << newKey.fingerprint().toStdString() << std::endl;
     }
@@ -90,8 +90,8 @@ RequestHandler::RequestHandler(QObject *parent): QObject(parent)
     QCA::KeyStoreManager::start();
     m_ksm.waitForBusyFinished();
 
-    QCA::KeyStore pgpks(QString("qca-gnupg"), &m_ksm);
-    foreach(const QCA::KeyStoreEntry kse, pgpks.entryList())
+    m_pgpks = new QCA::KeyStore(QString("qca-gnupg"), &m_ksm);
+    foreach(const QCA::KeyStoreEntry kse, m_pgpks->entryList())
     {
         QString text = kse.name() + ":" + kse.pgpPublicKey().fingerprint();
         std::cout << "Key Store: " << text.toStdString() << ": " << kse.pgpPublicKey().toString().toStdString() << std::endl;
@@ -173,4 +173,9 @@ void RequestHandler::addRequest(Request *request)
 void RequestHandler::removeRequest(Request *request)
 {
     m_requests.removeAll(request);
+}
+
+QString RequestHandler::writeEntry(QCA::PGPKey key)
+{
+    return m_pgpks->writeEntry(key);
 }

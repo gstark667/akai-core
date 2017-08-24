@@ -58,6 +58,7 @@ private:
     QList<Request*> m_requests;
     QMap<Address, quint16> m_nonce;
     QCA::KeyStoreManager m_ksm;
+    QCA::KeyStore *m_pgpks;
 
 public:
     RequestHandler(QObject *parent);
@@ -72,6 +73,8 @@ public slots:
     void makeRequest(Address addr, bool outgoing, QString message);
     void addRequest(Request *request);
     void removeRequest(Request *request);
+
+    QString writeEntry(QCA::PGPKey key);
 };
 
 #endif
