@@ -87,15 +87,24 @@ DummyRequest Request::toDummy()
 RequestHandler::RequestHandler(QObject *parent): QObject(parent)
 {
     // example of pgp with qca: http://lynxline.com/qt-and-use-of-cryptography-simple/
+    gpgme_error_t error = gpgme_new(m_gpg);
+    if (error != GPG_ERR_NO_ERROR)
+        std::cout << "We broke" << std::endl;
+
     QCA::KeyStoreManager::start();
     m_ksm.waitForBusyFinished();
 
     m_pgpks = new QCA::KeyStore(QString("qca-gnupg"), &m_ksm);
     foreach(const QCA::KeyStoreEntry kse, m_pgpks->entryList())
     {
+        if (m_settings.value("key") == kse.pgpPublicKey().fingerprint())
+            std::cout << "Found My Key" << std::endl;
         QString text = kse.name() + ":" + kse.pgpPublicKey().fingerprint();
         std::cout << "Key Store: " << text.toStdString() << ": " << kse.pgpPublicKey().toString().toStdString() << std::endl;
     }
+
+    QCA::PGPKey test;
+    std::cout << test.isNull() << std::endl;
     if (!m_settings.contains("port"))
         m_settings.setValue("port", 6667);
     m_sock.bind(QHostAddress("127.0.0.1"), quint16(m_settings.value("port").toUInt()));

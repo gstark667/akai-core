@@ -9,6 +9,7 @@
 #include <QtCore/QMetaObject>
 #include <QtNetwork/QUdpSocket>
 #include <QtCrypto/QtCrypto>
+#include <gpgme.h>
 
 #include "address.h"
 
@@ -59,6 +60,8 @@ private:
     QMap<Address, quint16> m_nonce;
     QCA::KeyStoreManager m_ksm;
     QCA::KeyStore *m_pgpks;
+    QCA::PGPKey m_key;
+    gpgme_ctx_t *m_gpg;
 
 public:
     RequestHandler(QObject *parent);

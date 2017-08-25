@@ -14,6 +14,6 @@ HEADERS  += request.h
 
 #FORMS    += CryptWin.ui
 
-LIBS += -lQt5Network -lqca-qt5
+LIBS += -lQt5Network -lqca-qt5 -lgpgme
 INCLUDEPATH += /usr/include/qt/Qca-qt5/
 
