@@ -90,6 +90,11 @@ RequestHandler::RequestHandler(QObject *parent): QObject(parent)
     makeRequest(Address{QHostAddress("127.0.0.1"), 6666}, true, "register");
 }
 
+RequestHandler::~RequestHandler()
+{
+    delete m_crypto;
+}
+
 quint16 RequestHandler::getNonce(Address addr)
 {
     if (!m_nonce.contains(addr))

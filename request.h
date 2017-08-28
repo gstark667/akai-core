@@ -63,6 +63,7 @@ private:
 
 public:
     RequestHandler(QObject *parent);
+    ~RequestHandler();
     quint16 getNonce(Address addr);
 
 private slots:

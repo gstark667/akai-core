@@ -2,6 +2,12 @@
 
 #include <iostream>
 
+CryptoException::CryptoException(gpgme_error_t error): QException()
+{
+    m_error = error;
+    std::cout << "throwing crypto exception: " << gpgme_strerror(error) << std::endl;
+}
+
 Crypto::Crypto(QString fingerPrint)
 {
     m_fingerPrint = fingerPrint;
@@ -12,7 +18,6 @@ Crypto::Crypto(QString fingerPrint)
    int tmp;
    //gpgme_ctx_t ceofcontext;
    gpgme_error_t err;
-   gpgme_data_t data;
 
    gpgme_engine_info_t enginfo;
 
@@ -22,84 +27,59 @@ Crypto::Crypto(QString fingerPrint)
    setlocale (LC_ALL, "");
    p = (char *) gpgme_check_version(NULL);
    printf("version=%s\n",p);
-   /* set locale, because tests do also */
    gpgme_set_locale(NULL, LC_CTYPE, setlocale (LC_CTYPE, NULL));
 
-   /* check for OpenPGP support */
    err = gpgme_engine_check_version(GPGME_PROTOCOL_OpenPGP);
    if(err != GPG_ERR_NO_ERROR) printf("Got error");
 
    p = (char *) gpgme_get_protocol_name(GPGME_PROTOCOL_OpenPGP);
    printf("Protocol name: %s\n",p);
 
-   /* get engine information */
    err = gpgme_get_engine_info(&enginfo);
-   if(err != GPG_ERR_NO_ERROR) printf("Got error");
+   if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
    printf("file=%s, home=%s\n",enginfo->file_name,enginfo->home_dir);
 
-   /* create our own context */
    err = gpgme_new(&m_ctx);
-   if(err != GPG_ERR_NO_ERROR) printf("Got error");
+   if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
 
-   /* set protocol to use in our context */
    err = gpgme_set_protocol(m_ctx,GPGME_PROTOCOL_OpenPGP);
-   if(err != GPG_ERR_NO_ERROR) printf("Got error");
+   if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
 
-   /* set engine info in our context; I changed it for ceof like this:
+   err = gpgme_ctx_set_engine_info (m_ctx, GPGME_PROTOCOL_OpenPGP, enginfo->file_name,enginfo->home_dir);
+   if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
 
-   err = gpgme_ctx_set_engine_info (ceofcontext, GPGME_PROTOCOL_OpenPGP,
-               "/usr/bin/gpg","/home/user/nico/.ceof/gpg/");
-
-      but I'll use standard values for this example: */
-
-   err = gpgme_ctx_set_engine_info (m_ctx, GPGME_PROTOCOL_OpenPGP,
-               enginfo->file_name,enginfo->home_dir);
-   if(err != GPG_ERR_NO_ERROR) printf("Got error");
-
-   /* do ascii armor data, so output is readable in console */
    gpgme_set_armor(m_ctx, 1);
 
-   /* create buffer for data exchange with gpgme*/
-   err = gpgme_data_new(&data);
-   if(err != GPG_ERR_NO_ERROR) printf("Got error");
+   err = gpgme_data_new(&m_data);
+   if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
 
-   /* set encoding for the buffer... */
-   err = gpgme_data_set_encoding(data,GPGME_DATA_ENCODING_ARMOR);
-   if(err != GPG_ERR_NO_ERROR) printf("Got error");
+   err = gpgme_data_set_encoding(m_data,GPGME_DATA_ENCODING_ARMOR);
+   if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
 
-   /* verify encoding: not really needed */
-   tmp = gpgme_data_get_encoding(data);
+   tmp = gpgme_data_get_encoding(m_data);
    if(tmp == GPGME_DATA_ENCODING_ARMOR) {
       printf("encode ok\n");
    } else {
       printf("encode broken\n");
    }
 
-   /* with NULL it exports all public keys */
-   err = gpgme_op_export(m_ctx,NULL,0,data);
-   if(err != GPG_ERR_NO_ERROR) printf("Got error");
+   err = gpgme_op_export(m_ctx,NULL,0,m_data);
+   if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
 
-   read_bytes = gpgme_data_seek (data, 0, SEEK_END);
+   read_bytes = gpgme_data_seek (m_data, 0, SEEK_END);
    printf("end is=%d\n",read_bytes);
    if(read_bytes == -1) {
       p = (char *) gpgme_strerror(errno);
       printf("data-seek-err: %s\n",p);
-      printf("Got error");
+      throw CryptoException(err);
    }
-   read_bytes = gpgme_data_seek (data, 0, SEEK_SET);
+   read_bytes = gpgme_data_seek (m_data, 0, SEEK_SET);
    printf("start is=%d (should be 0)\n",read_bytes);
+}
 
-   /* write keys to stderr */
-   /*while ((read_bytes = gpgme_data_read (data, buf, SIZE)) > 0) {
-      write(2,buf,read_bytes);
-   }*/
-   /* append \n, so that there is really a line feed */
-   //write(2,"\n",1);
-
-   /* free data */
-   gpgme_data_release(data);
-
-   /* free context */
+Crypto::~Crypto()
+{
+   gpgme_data_release(m_data);
    gpgme_release(m_ctx);
 
 }
