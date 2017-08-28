@@ -53,11 +53,6 @@ void Request::process()
     else if (getType().compare("key") == 0 && m_args.size() == 3)
     {
         std::cout << "importing key: " << m_args.at(1).toStdString() << ": " << m_args.at(2).toStdString() << std::endl;
-        QCA::PGPKey newKey = QCA::PGPKey::fromString(m_args.at(2));
-        if (newKey.fingerprint().toLower() == m_args.at(1).toLower())
-            std::cout << "fingerprint is correct: " << m_handler->writeEntry(newKey).toStdString() << std::endl;
-        else
-            std::cout << "fingerprints do not match: " << m_args.at(1).toStdString() << ": " << newKey.fingerprint().toStdString() << std::endl;
     }
 
     for (size_t i = 0; i < responses.size(); ++i)
@@ -86,25 +81,8 @@ DummyRequest Request::toDummy()
 
 RequestHandler::RequestHandler(QObject *parent): QObject(parent)
 {
-    // example of pgp with qca: http://lynxline.com/qt-and-use-of-cryptography-simple/
-    gpgme_error_t error = gpgme_new(m_gpg);
-    if (error != GPG_ERR_NO_ERROR)
-        std::cout << "We broke" << std::endl;
+    m_crypto = new Crypto("");
 
-    QCA::KeyStoreManager::start();
-    m_ksm.waitForBusyFinished();
-
-    m_pgpks = new QCA::KeyStore(QString("qca-gnupg"), &m_ksm);
-    foreach(const QCA::KeyStoreEntry kse, m_pgpks->entryList())
-    {
-        if (m_settings.value("key") == kse.pgpPublicKey().fingerprint())
-            std::cout << "Found My Key" << std::endl;
-        QString text = kse.name() + ":" + kse.pgpPublicKey().fingerprint();
-        std::cout << "Key Store: " << text.toStdString() << ": " << kse.pgpPublicKey().toString().toStdString() << std::endl;
-    }
-
-    QCA::PGPKey test;
-    std::cout << test.isNull() << std::endl;
     if (!m_settings.contains("port"))
         m_settings.setValue("port", 6667);
     m_sock.bind(QHostAddress("127.0.0.1"), quint16(m_settings.value("port").toUInt()));
@@ -126,8 +104,8 @@ void RequestHandler::readDatagrams()
     quint16 senderPort;
     while (m_sock.hasPendingDatagrams())
     {
-	    datagram.resize(m_sock.pendingDatagramSize());
-	    m_sock.readDatagram(datagram.data(), datagram.size(), &senderAddr, &senderPort);
+        datagram.resize(m_sock.pendingDatagramSize());
+        m_sock.readDatagram(datagram.data(), datagram.size(), &senderAddr, &senderPort);
         QString message = QString(datagram.data());
         Request *request = new Request(Address{senderAddr, senderPort}, false, message, this);
         if (request->isAcknowledge())
@@ -184,7 +162,3 @@ void RequestHandler::removeRequest(Request *request)
     m_requests.removeAll(request);
 }
 
-QString RequestHandler::writeEntry(QCA::PGPKey key)
-{
-    return m_pgpks->writeEntry(key);
-}

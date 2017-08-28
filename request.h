@@ -12,6 +12,7 @@
 #include <gpgme.h>
 
 #include "address.h"
+#include "crypto.h"
 
 class RequestHandler;
 
@@ -58,10 +59,7 @@ private:
     QUdpSocket m_sock;
     QList<Request*> m_requests;
     QMap<Address, quint16> m_nonce;
-    QCA::KeyStoreManager m_ksm;
-    QCA::KeyStore *m_pgpks;
-    QCA::PGPKey m_key;
-    gpgme_ctx_t *m_gpg;
+    Crypto *m_crypto;
 
 public:
     RequestHandler(QObject *parent);
@@ -76,8 +74,6 @@ public slots:
     void makeRequest(Address addr, bool outgoing, QString message);
     void addRequest(Request *request);
     void removeRequest(Request *request);
-
-    QString writeEntry(QCA::PGPKey key);
 };
 
 #endif

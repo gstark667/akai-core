@@ -4,3 +4,4 @@ moc_*
 *.swp
 Makefile
 .qmake.stash
+*core*
