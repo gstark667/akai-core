@@ -26,8 +26,8 @@ public:
     Crypto(QString fingerPrint);
     ~Crypto();
 
-    QString sign(QString text);
     QString encrypt(QString receiver, QString text);
+    QString decrypt(QString &sender, QString text);
 };
 
 #endif

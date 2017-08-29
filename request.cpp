@@ -82,9 +82,9 @@ DummyRequest Request::toDummy()
 RequestHandler::RequestHandler(QObject *parent): QObject(parent)
 {
     m_crypto = new Crypto(m_settings.value("key").toString());
-    QString test = m_crypto->sign("test");
-    std::cout << test.toStdString() << std::endl;
-    QString test2 = m_crypto->encrypt("C682C4D74003D866A420C930FACC7A69C22F3D74", "test");
+    //QString test = m_crypto->sign("test");
+    //std::cout << test.toStdString() << std::endl;
+    QString test2 = m_crypto->encrypt("472F269CE16FDD3BB178E0CB31943307B806F823", "test");
     std::cout << test2.toStdString() << std::endl;
 
     if (!m_settings.contains("port"))

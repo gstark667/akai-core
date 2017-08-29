@@ -88,31 +88,6 @@ Crypto::~Crypto()
     gpgme_release(m_ctx);
 }
 
-QString Crypto::sign(QString text)
-{
-    gpgme_data_t in, out;
-    gpgme_error_t error;
-    error = gpgme_data_new_from_mem(&in, text.toStdString().c_str(), text.size(), false);
-    if (error != GPG_ERR_NO_ERROR)
-        throw CryptoException(error);
-    error = gpgme_data_new(&out);
-    if (error != GPG_ERR_NO_ERROR)
-        throw CryptoException(error);
-    error = gpgme_op_sign(m_ctx, in, out, GPGME_SIG_MODE_CLEAR);
-    if (error != GPG_ERR_NO_ERROR)
-        throw CryptoException(error);
-
-    int ret;
-    ret = gpgme_data_seek(out, 0, SEEK_SET);
-    char buffer[2048];
-    QString output = "";
-    while ((ret = gpgme_data_read(out, buffer, 2048)) > 0)
-    {
-        output += buffer;
-    }
-    return output;
-}
-
 QString Crypto::encrypt(QString receiver, QString text)
 {
     gpgme_key_t receiverKey[2];
@@ -129,7 +104,7 @@ QString Crypto::encrypt(QString receiver, QString text)
     error = gpgme_data_new(&out);
     if (error != GPG_ERR_NO_ERROR)
         throw CryptoException(error);
-    error = gpgme_op_encrypt(m_ctx, receiverKey, GPGME_ENCRYPT_NO_ENCRYPT_TO, in, out);
+    error = gpgme_op_encrypt_sign(m_ctx, receiverKey, GPGME_ENCRYPT_NO_ENCRYPT_TO, in, out);
     if (error != GPG_ERR_NO_ERROR)
         throw CryptoException(error);
 
@@ -144,5 +119,10 @@ QString Crypto::encrypt(QString receiver, QString text)
     return output;
 
     //gpgme_op_encrypt(m_ctx, receiverKey, NULL, data, 
+}
+
+QString Crypto::decrypt(QString &sender, QString text)
+{
+
 }
 
