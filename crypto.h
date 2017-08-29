@@ -19,11 +19,15 @@ class Crypto
 private:
     QString m_fingerPrint;
     gpgme_ctx_t m_ctx;
+    gpgme_key_t m_key;
     gpgme_data_t m_data;
 
 public:
     Crypto(QString fingerPrint);
     ~Crypto();
+
+    QString sign(QString text);
+    QString encrypt(QString receiver, QString text);
 };
 
 #endif
