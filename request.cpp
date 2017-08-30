@@ -4,6 +4,10 @@
 
 Request::Request(Address addr, bool outgoing, QString message, RequestHandler *handler, DummyRequest callback)
 {
+    std::cout << "Got message: " << message.toStdString() << std::endl;
+    if (!outgoing)
+        message = handler->decrypt(message, addr);
+
     QString nonce = message.section(":", 0, 0);
     QString front = message.section(':', 1, 1);
     QString back = message.section(':', 2);
@@ -84,11 +88,11 @@ RequestHandler::RequestHandler(QObject *parent): QObject(parent)
     m_crypto = new Crypto(m_settings.value("key").toString());
     //QString test = m_crypto->sign("test");
     //std::cout << test.toStdString() << std::endl;
-    QString test2 = m_crypto->encrypt("472F269CE16FDD3BB178E0CB31943307B806F823", "test");
-    std::cout << test2.toStdString() << std::endl;
-    QString sender, text;
-    text = m_crypto->decrypt(sender, test2);
-    std::cout << sender.toStdString() << " sent: " << text.toStdString() << std::endl;
+    //QString test2 = m_crypto->encrypt("472F269CE16FDD3BB178E0CB31943307B806F823", "test");
+    //std::cout << test2.toStdString() << std::endl;
+    //QString sender, text;
+    //text = m_crypto->decrypt(sender, test2);
+    //std::cout << sender.toStdString() << " sent: " << text.toStdString() << std::endl;
 
     if (!m_settings.contains("port"))
         m_settings.setValue("port", 6667);
@@ -102,11 +106,35 @@ RequestHandler::~RequestHandler()
     delete m_crypto;
 }
 
-quint16 RequestHandler::getNonce(Address addr)
+Peer RequestHandler::getPeer(Address addr, QString fingerPrint)
 {
-    if (!m_nonce.contains(addr))
-        m_nonce[addr] = 0;
-    return m_nonce[addr]++;
+    if (m_peers.contains(addr))
+        if (fingerPrint != "" && m_peers[addr].fingerPrint != fingerPrint)
+            throw RequestException();
+        return m_peers[addr];
+    throw RequestException();
+}
+
+QString RequestHandler::encrypt(QString message, Address addr)
+{
+    Peer peer = getPeer(addr);
+    return m_crypto->encrypt(message, peer.fingerPrint);
+}
+
+QString RequestHandler::decrypt(QString message, Address addr)
+{
+    Peer peer;
+    QString text;
+    QString fingerPrint;
+    try
+    {
+        text = m_crypto->decrypt(fingerPrint, message);
+    }
+    catch (RequestException e)
+    {
+        std::cout << "New fingerprint" << std::endl;
+    }
+    return text;
 }
 
 void RequestHandler::readDatagrams()
@@ -141,7 +169,7 @@ Request *RequestHandler::findRequest(DummyRequest dumbReq)
     for (size_t i = 0; i < m_requests.size(); ++i)
     {
         Request *request = m_requests.at(i);
-        if (dumbReq.addr == request->getAddress() && dumbReq.nonce == request->getNonce())
+        if (dumbReq.addr == request->getAddress() && dumbReq.nonce == getPeer(request->getAddress()).nonce)
             return request;
     }
     return nullptr;
@@ -157,7 +185,7 @@ void RequestHandler::makeRequest(Address addr, bool outgoing, QString message)
 {
     Request *request;
     if (outgoing)
-        request = new Request(addr, outgoing, this->getNonce(addr) + ":" + message, this);
+        request = new Request(addr, outgoing, this->getPeer(addr).nonce + ":" + message, this);
     else
         request = new Request(addr, outgoing, message, this);
     QMetaObject::invokeMethod(request, "process", Qt::QueuedConnection);

@@ -16,11 +16,22 @@
 
 class RequestHandler;
 
+struct Peer
+{
+    Address addr;
+    QString fingerPrint;
+    quint16 nonce;
+};
+
 struct DummyRequest
 {
     Address addr;
     quint16 nonce;
     bool isEmpty = true;
+};
+
+class RequestException: public QException
+{
 };
 
 class Request: public QObject
@@ -58,13 +69,18 @@ private:
     QSettings m_settings;
     QUdpSocket m_sock;
     QList<Request*> m_requests;
-    QMap<Address, quint16> m_nonce;
+    QMap<Address, Peer> m_peers;
     Crypto *m_crypto;
 
 public:
     RequestHandler(QObject *parent);
     ~RequestHandler();
-    quint16 getNonce(Address addr);
+    Peer getPeer(Address addr, QString fingerPrint="");
+    void addPeer(Address addr, QString fingerPrint);
+    void removePeer(Address addr);
+
+    QString encrypt(QString message, Address addr);
+    QString decrypt(QString message, Address addr);
 
 private slots:
     void readDatagrams();
