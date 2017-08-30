@@ -27,7 +27,7 @@ public:
     ~Crypto();
 
     QString encrypt(QString receiver, QString text);
-    QString decrypt(QString &sender, QString text);
+    QString decrypt(QString &sender, QString crypt);
 };
 
 #endif

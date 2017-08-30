@@ -110,19 +110,43 @@ QString Crypto::encrypt(QString receiver, QString text)
 
     int ret;
     ret = gpgme_data_seek(out, 0, SEEK_SET);
-    char buffer[2048];
+    char buffer[2048] = "";
     QString output = "";
     while ((ret = gpgme_data_read(out, buffer, 2048)) > 0)
     {
         output += buffer;
     }
+    gpgme_data_release(in);
+    gpgme_data_release(out);
     return output;
 
     //gpgme_op_encrypt(m_ctx, receiverKey, NULL, data, 
 }
 
-QString Crypto::decrypt(QString &sender, QString text)
+QString Crypto::decrypt(QString &sender, QString crypt)
 {
+    gpgme_error_t error;
+    gpgme_data_t in, out;
+    error = gpgme_data_new_from_mem(&in, crypt.toStdString().c_str(), crypt.size(), false);
+    if (error != GPG_ERR_NO_ERROR)
+        throw CryptoException(error);
+    error = gpgme_data_new(&out);
+    if (error != GPG_ERR_NO_ERROR)
+        throw CryptoException(error);
+    error = gpgme_op_decrypt(m_ctx, in, out);
+    if (error != GPG_ERR_NO_ERROR)
+        throw CryptoException(error);
 
+    int ret;
+    ret = gpgme_data_seek(out, 0, SEEK_SET);
+    char buffer[2048] = "";
+    QString output = "";
+    while ((ret = gpgme_data_read(out, buffer, 2048)) > 0)
+    {
+        output += buffer;
+    }
+    gpgme_data_release(in);
+    gpgme_data_release(out);
+    return buffer;
 }
 
