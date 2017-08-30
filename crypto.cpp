@@ -133,7 +133,7 @@ QString Crypto::decrypt(QString &sender, QString crypt)
     error = gpgme_data_new(&out);
     if (error != GPG_ERR_NO_ERROR)
         throw CryptoException(error);
-    error = gpgme_op_decrypt(m_ctx, in, out);
+    error = gpgme_op_decrypt_verify(m_ctx, in, out);
     if (error != GPG_ERR_NO_ERROR)
         throw CryptoException(error);
 
@@ -147,6 +147,10 @@ QString Crypto::decrypt(QString &sender, QString crypt)
     }
     gpgme_data_release(in);
     gpgme_data_release(out);
+
+    // TODO this probably needs to be freed
+    gpgme_verify_result_t result = gpgme_op_verify_result(m_ctx);
+    sender = QString(result->signatures[0].fpr);
     return buffer;
 }
 

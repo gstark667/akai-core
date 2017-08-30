@@ -84,11 +84,11 @@ RequestHandler::RequestHandler(QObject *parent): QObject(parent)
     m_crypto = new Crypto(m_settings.value("key").toString());
     //QString test = m_crypto->sign("test");
     //std::cout << test.toStdString() << std::endl;
-    QString test2 = m_crypto->encrypt("422F410CE93D7EC4005C46918B5D67B61AC9A727", "test");
+    QString test2 = m_crypto->encrypt("472F269CE16FDD3BB178E0CB31943307B806F823", "test");
     std::cout << test2.toStdString() << std::endl;
     QString sender, text;
     text = m_crypto->decrypt(sender, test2);
-    std::cout << text.toStdString() << std::endl;
+    std::cout << sender.toStdString() << " sent: " << text.toStdString() << std::endl;
 
     if (!m_settings.contains("port"))
         m_settings.setValue("port", 6667);
