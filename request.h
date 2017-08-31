@@ -13,15 +13,9 @@
 
 #include "address.h"
 #include "crypto.h"
+#include "peer.h"
 
 class RequestHandler;
-
-struct Peer
-{
-    Address addr;
-    QString fingerPrint;
-    quint16 nonce;
-};
 
 struct DummyRequest
 {
@@ -69,13 +63,12 @@ private:
     QSettings m_settings;
     QUdpSocket m_sock;
     QList<Request*> m_requests;
-    QMap<Address, Peer> m_peers;
+    Peers *m_peers;
     Crypto *m_crypto;
 
 public:
     RequestHandler(QObject *parent);
     ~RequestHandler();
-    Peer getPeer(Address addr, QString fingerPrint="");
     void addPeer(Address addr, QString fingerPrint);
     void removePeer(Address addr);
 

@@ -85,6 +85,7 @@ DummyRequest Request::toDummy()
 
 RequestHandler::RequestHandler(QObject *parent): QObject(parent)
 {
+    m_peers = new Peers();
     m_crypto = new Crypto(m_settings.value("key").toString());
     //QString test = m_crypto->sign("test");
     //std::cout << test.toStdString() << std::endl;
@@ -93,6 +94,8 @@ RequestHandler::RequestHandler(QObject *parent): QObject(parent)
     //QString sender, text;
     //text = m_crypto->decrypt(sender, test2);
     //std::cout << sender.toStdString() << " sent: " << text.toStdString() << std::endl;
+
+    std::cout << m_settings.value("port").toString().toStdString() << std::endl;
 
     if (!m_settings.contains("port"))
         m_settings.setValue("port", 6667);
@@ -103,21 +106,13 @@ RequestHandler::RequestHandler(QObject *parent): QObject(parent)
 
 RequestHandler::~RequestHandler()
 {
+    delete m_peers;
     delete m_crypto;
-}
-
-Peer RequestHandler::getPeer(Address addr, QString fingerPrint)
-{
-    if (m_peers.contains(addr))
-        if (fingerPrint != "" && m_peers[addr].fingerPrint != fingerPrint)
-            throw RequestException();
-        return m_peers[addr];
-    throw RequestException();
 }
 
 QString RequestHandler::encrypt(QString message, Address addr)
 {
-    Peer peer = getPeer(addr);
+    Peer peer = m_peers->get(addr);
     return m_crypto->encrypt(message, peer.fingerPrint);
 }
 
@@ -169,7 +164,7 @@ Request *RequestHandler::findRequest(DummyRequest dumbReq)
     for (size_t i = 0; i < m_requests.size(); ++i)
     {
         Request *request = m_requests.at(i);
-        if (dumbReq.addr == request->getAddress() && dumbReq.nonce == getPeer(request->getAddress()).nonce)
+        if (dumbReq.addr == request->getAddress() && dumbReq.nonce == m_peers->get(request->getAddress()).nonce)
             return request;
     }
     return nullptr;
@@ -185,7 +180,7 @@ void RequestHandler::makeRequest(Address addr, bool outgoing, QString message)
 {
     Request *request;
     if (outgoing)
-        request = new Request(addr, outgoing, this->getPeer(addr).nonce + ":" + message, this);
+        request = new Request(addr, outgoing, m_peers->get(addr).nonce + ":" + message, this);
     else
         request = new Request(addr, outgoing, message, this);
     QMetaObject::invokeMethod(request, "process", Qt::QueuedConnection);

@@ -2,7 +2,9 @@
 #include <QApplication>
 #include <QtCore/QSettings>
 #include <QtCore/QCoreApplication>
+#include <QtCore/QStandardPaths>
 #include "request.h"
+#include <iostream>
 
 
 int main(int argc, char *argv[]) {
@@ -10,10 +12,12 @@ int main(int argc, char *argv[]) {
         return 1;
     QString name("whale");
     name += argv[1];
+    std::cout << name.toStdString() << std::endl;
     QCoreApplication::setOrganizationName("akai");
-    QCoreApplication::setApplicationName("whale");
+    QCoreApplication::setApplicationName(name);
     QCA::Initializer init;
     QApplication a(argc, argv);
+    std::cout << QStandardPaths::writableLocation(QStandardPaths::DataLocation).toStdString() << std::endl;
     RequestHandler r(&a);
     return a.exec();
 }

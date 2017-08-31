@@ -9,6 +9,7 @@ TEMPLATE = app
 SOURCES += main.cpp \
         address.cpp \
         crypto.cpp  \
+        peer.cpp    \
         request.cpp
 
 HEADERS  += request.h
