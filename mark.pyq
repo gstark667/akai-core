@@ -87,17 +87,21 @@ RequestHandler::RequestHandler(QObject *parent): QObject(parent)
 {
     m_peers = new Peers();
     m_crypto = new Crypto(m_settings.value("key").toString());
+    //QString test = m_crypto->sign("test");
+    //std::cout << test.toStdString() << std::endl;
+    //QString test2 = m_crypto->encrypt("472F269CE16FDD3BB178E0CB31943307B806F823", "test");
+    //std::cout << test2.toStdString() << std::endl;
+    //QString sender, text;
+    //text = m_crypto->decrypt(sender, test2);
+    //std::cout << sender.toStdString() << " sent: " << text.toStdString() << std::endl;
+
+    std::cout << m_settings.value("port").toString().toStdString() << std::endl;
 
     if (!m_settings.contains("port"))
         m_settings.setValue("port", 6667);
     m_sock.bind(QHostAddress("127.0.0.1"), quint16(m_settings.value("port").toUInt()));
     connect(&m_sock, &QUdpSocket::readyRead, this, &RequestHandler::readDatagrams);
-
-    std::cout << m_settings.value("port").toString().toStdString() << std::endl;
-    foreach (Address addr, m_peers->list())
-    {
-        makeRequest(addr, true, "register");
-    }
+    makeRequest(Address{QHostAddress("127.0.0.1"), 6666}, true, "register");
 }
 
 RequestHandler::~RequestHandler()
@@ -116,7 +120,6 @@ QString RequestHandler::decrypt(QString message, Address addr)
 {
     Peer peer;
     QString text;
-    std::cout << "Decrypting: " << message.toStdString() << std::endl;
     QString fingerPrint;
     try
     {
@@ -170,8 +173,7 @@ Request *RequestHandler::findRequest(DummyRequest dumbReq)
 void RequestHandler::sendRequest(Request *request)
 {
     std::cout << "sending request: " << request->getMessage().toStdString() << std::endl;
-    QString message = m_crypto->encrypt(m_peers->get(request->getAddress()).fingerPrint, request->getMessage());
-    m_sock.writeDatagram(message.toUtf8(), request->getAddress().host, request->getAddress().port);
+    m_sock.writeDatagram(request->getMessage().toUtf8(), request->getAddress().host, request->getAddress().port);
 }
 
 void RequestHandler::makeRequest(Address addr, bool outgoing, QString message)

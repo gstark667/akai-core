@@ -90,6 +90,7 @@ Crypto::~Crypto()
 
 QString Crypto::encrypt(QString receiver, QString text)
 {
+    std::cout << "encrypting for: " << receiver.toStdString() << ": " << text.toStdString() << std::endl;
     gpgme_key_t receiverKey[2];
     gpgme_error_t error;
     error = gpgme_get_key(m_ctx, receiver.toStdString().c_str(), &receiverKey[0], false);
@@ -104,7 +105,7 @@ QString Crypto::encrypt(QString receiver, QString text)
     error = gpgme_data_new(&out);
     if (error != GPG_ERR_NO_ERROR)
         throw CryptoException(error);
-    error = gpgme_op_encrypt_sign(m_ctx, receiverKey, GPGME_ENCRYPT_NO_ENCRYPT_TO, in, out);
+    error = gpgme_op_encrypt_sign(m_ctx, receiverKey, GPGME_ENCRYPT_ALWAYS_TRUST, in, out);
     if (error != GPG_ERR_NO_ERROR)
         throw CryptoException(error);
 

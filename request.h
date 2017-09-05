@@ -72,6 +72,7 @@ public:
     void addPeer(Address addr, QString fingerPrint);
     void removePeer(Address addr);
 
+    QString getFingerPrint(Address addr);
     QString encrypt(QString message, Address addr);
     QString decrypt(QString message, Address addr);
 
