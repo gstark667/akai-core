@@ -98,8 +98,12 @@ QString Crypto::encrypt(QString receiver, QString text)
         throw CryptoException(error);
     receiverKey[1] = 0;
 
+    // we need to copy the string into a new pointer so it doesn't get deleted
+    char *data = (char*)malloc(sizeof(char) * text.size() + 1);
+    memcpy(data, text.toStdString().c_str(), text.size() + 1);
+
     gpgme_data_t in, out;
-    error = gpgme_data_new_from_mem(&in, text.toStdString().c_str(), text.size(), false);
+    error = gpgme_data_new_from_mem(&in, data, text.size(), false);
     if (error != GPG_ERR_NO_ERROR)
         throw CryptoException(error);
     error = gpgme_data_new(&out);
@@ -126,9 +130,13 @@ QString Crypto::encrypt(QString receiver, QString text)
 
 QString Crypto::decrypt(QString &sender, QString crypt)
 {
+    // we need to copy the string into a new pointer so it doesn't get deleted
+    char *data = (char*)malloc(sizeof(char) * crypt.size() + 1);
+    memcpy(data, crypt.toStdString().c_str(), crypt.size() + 1);
+
     gpgme_error_t error;
     gpgme_data_t in, out;
-    error = gpgme_data_new_from_mem(&in, crypt.toStdString().c_str(), crypt.size(), false);
+    error = gpgme_data_new_from_mem(&in, data, crypt.size(), false);
     if (error != GPG_ERR_NO_ERROR)
         throw CryptoException(error);
     error = gpgme_data_new(&out);
