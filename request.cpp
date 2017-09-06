@@ -5,9 +5,6 @@
 Request::Request(Address addr, bool outgoing, QString message, RequestHandler *handler, DummyRequest callback)
 {
     std::cout << "Got message: " << message.toStdString() << std::endl;
-    if (!outgoing)
-        message = handler->decrypt(message, addr);
-
     QString nonce = message.section(":", 0, 0);
     QString front = message.section(':', 1, 1);
     QString back = message.section(':', 2);
@@ -139,8 +136,10 @@ void RequestHandler::readDatagrams()
     {
         datagram.resize(m_sock.pendingDatagramSize());
         m_sock.readDatagram(datagram.data(), datagram.size(), &senderAddr, &senderPort);
+        Address addr = {senderAddr, senderPort};
         QString message = QString(datagram.data());
-        Request *request = new Request(Address{senderAddr, senderPort}, false, message, this);
+        message = decrypt(message, addr);
+        Request *request = new Request(addr, false, message, this);
         if (request->isAcknowledge())
         {
             Request *request2 = findRequest(request->toDummy());

@@ -38,6 +38,7 @@ private:
     bool m_outgoing;
     quint16 m_nonce;
     DummyRequest m_callback;
+    bool m_error = false;
 
 public:
     Request(Address addr, bool outgoing, QString message, RequestHandler *handler, DummyRequest callback=DummyRequest{});

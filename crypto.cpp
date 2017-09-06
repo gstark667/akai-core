@@ -12,23 +12,16 @@ Crypto::Crypto(QString fingerPrint)
 {
     m_fingerPrint = fingerPrint;
 
-    //char *p;
     char buf[2048];
     size_t read_bytes;
     int tmp;
-    //gpgme_ctx_t ceofcontext;
     gpgme_error_t err;
 
     gpgme_engine_info_t enginfo;
 
-    /* The function `gpgme_check_version' must be called before any other
-     * function in the library, because it initializes the thread support
-     * subsystem in GPGME. (from the info page) */
     setlocale (LC_ALL, "");
     char *version = (char *) gpgme_check_version(NULL);
     printf("version=%s\n",version);
-    //free(version);
-    /* set locale, because tests do also */
     gpgme_set_locale(NULL, LC_CTYPE, setlocale (LC_CTYPE, NULL));
 
     err = gpgme_engine_check_version(GPGME_PROTOCOL_OpenPGP);
@@ -36,7 +29,6 @@ Crypto::Crypto(QString fingerPrint)
 
     char *protocol = (char *) gpgme_get_protocol_name(GPGME_PROTOCOL_OpenPGP);
     printf("Protocol name: %s\n",protocol);
-    //free(protocol);
 
     err = gpgme_get_engine_info(&enginfo);
     if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
@@ -123,8 +115,6 @@ QString Crypto::encrypt(QString receiver, QString text)
     gpgme_data_release(in);
     gpgme_data_release(out);
     return output;
-
-    //gpgme_op_encrypt(m_ctx, receiverKey, NULL, data, 
 }
 
 QString Crypto::decrypt(QString &sender, QString crypt)
