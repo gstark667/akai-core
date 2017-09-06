@@ -87,6 +87,7 @@ RequestHandler::RequestHandler(QObject *parent): QObject(parent)
 {
     m_peers = new Peers();
     m_crypto = new Crypto(m_settings.value("key").toString());
+    m_settings.setValue("key", m_crypto->getFingerPrint());
 
     if (!m_settings.contains("port"))
         m_settings.setValue("port", 6667);

@@ -66,20 +66,19 @@ Crypto::Crypto(QString fingerPrint)
        printf("encode broken\n");
     }
 
-    err = gpgme_get_key(m_ctx, fingerPrint.toStdString().c_str(), &m_key, true);
+    if (m_fingerPrint == "")
+    {
+        std::cout << "generating new key" << std::endl;
+        err = gpgme_op_createkey(m_ctx, "asdfasdf", NULL, 0, 0, NULL, GPGME_CREATE_NOEXPIRE | GPGME_CREATE_ENCR | GPGME_CREATE_SIGN | GPGME_CREATE_NOPASSWD | GPGME_CREATE_FORCE);
+        if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
+        gpgme_genkey_result_t genkey = gpgme_op_genkey_result(m_ctx);
+        m_fingerPrint = genkey->fpr;
+        std::cout << "new fingerprint: " << m_fingerPrint.toStdString() << std::endl;
+    }
+
+    err = gpgme_get_key(m_ctx, m_fingerPrint.toStdString().c_str(), &m_key, true);
     if (err != GPG_ERR_NO_ERROR)
         throw CryptoException(err);
-
-    /*err = gpgme_op_export(m_ctx,NULL,0,m_data);
-    if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
-
-    read_bytes = gpgme_data_seek (m_data, 0, SEEK_END);
-    printf("end is=%d\n",read_bytes);
-    if(read_bytes == -1) {
-        throw CryptoException(err);
-    }
-    read_bytes = gpgme_data_seek (m_data, 0, SEEK_SET);
-    printf("start is=%d (should be 0)\n",read_bytes);*/
 }
 
 Crypto::~Crypto()
