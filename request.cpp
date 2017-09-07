@@ -2,9 +2,9 @@
 
 #include <iostream>
 
+
 Request::Request(Address addr, bool outgoing, QString message, RequestHandler *handler, DummyRequest callback)
 {
-    std::cout << "Got message: " << message.toStdString() << std::endl;
     QString nonce = message.section(":", 0, 0);
     QString front = message.section(':', 1, 1);
     QString back = message.section(':', 2);
@@ -48,8 +48,11 @@ void Request::process()
     QList<Request*> responses;
     if (getType().compare("register") == 0 && m_args.size() == 2)
     {
-        responses.append(new Request(m_addr, true, QString::number(m_nonce) + ":ack", m_handler));
-        std::cout << m_args.at(1).toStdString() << std::endl;
+        if (!m_handler->isConnected(m_addr))
+        {
+            m_handler->connectPeer(m_addr, m_args.at(1));
+            responses.append(new Request(m_addr, true, "0:register:" + m_handler->getFingerPrint(), m_handler));
+        }
     }
     else if (getType().compare("key") == 0 && m_args.size() == 3)
     {
@@ -71,6 +74,7 @@ QString Request::getMessage()
         return message + m_args.at(0);
     for (size_t i = 0; i < m_args.size() - 1; ++i)
         message += m_args.at(i) + " ";
+    message = message.trimmed();
     return message + ":" + m_args.at(m_args.size() - 1);
 }
 
@@ -94,7 +98,7 @@ RequestHandler::RequestHandler(QObject *parent): QObject(parent)
     std::cout << m_settings.value("port").toString().toStdString() << std::endl;
     foreach (Address addr, m_peers->list())
     {
-        makeRequest(addr, true, "register");
+        makeRequest(addr, true, "register:" + m_crypto->getFingerPrint());
     }
 }
 
@@ -102,6 +106,16 @@ RequestHandler::~RequestHandler()
 {
     delete m_peers;
     delete m_crypto;
+}
+
+QString RequestHandler::getFingerPrint()
+{
+    return m_crypto->getFingerPrint();
+}
+
+bool RequestHandler::isConnected(Address addr)
+{
+    return m_peers->isConnected(addr);
 }
 
 QString RequestHandler::encrypt(QString message, Address addr)
@@ -138,7 +152,9 @@ void RequestHandler::readDatagrams()
         m_sock.readDatagram(datagram.data(), datagram.size(), &senderAddr, &senderPort);
         Address addr = {senderAddr, senderPort};
         QString message = QString(datagram.data());
-        message = decrypt(message, addr);
+        std::cout << "got message: " << message.toStdString() << std::endl;
+        if (message.indexOf("0:register:") != 0)
+            message = decrypt(message, addr);
         Request *request = new Request(addr, false, message, this);
         if (request->isAcknowledge())
         {
@@ -169,9 +185,17 @@ Request *RequestHandler::findRequest(DummyRequest dumbReq)
 
 void RequestHandler::sendRequest(Request *request)
 {
-    std::cout << "sending request: " << request->getMessage().toStdString() << std::endl;
-    QString message = m_crypto->encrypt(m_peers->get(request->getAddress()).fingerPrint, request->getMessage());
-    m_sock.writeDatagram(message.toUtf8(), request->getAddress().host, request->getAddress().port);
+    QString message = request->getMessage();
+    Address address = request->getAddress();
+    bool connected = m_peers->isConnected(address);
+    bool isRegister = message.indexOf("0:register:") == 0;
+    std::cout << "sending message: " << message.toStdString() << std::endl;
+    if (!isRegister && connected)
+        message = m_crypto->encrypt(m_peers->get(request->getAddress()).fingerPrint, message);
+    if (connected || isRegister)
+        m_sock.writeDatagram(message.toUtf8(), address.host, address.port);
+    else
+        throw RequestException();
 }
 
 void RequestHandler::makeRequest(Address addr, bool outgoing, QString message)
@@ -193,5 +217,11 @@ void RequestHandler::addRequest(Request *request)
 void RequestHandler::removeRequest(Request *request)
 {
     m_requests.removeAll(request);
+}
+
+void RequestHandler::connectPeer(Address addr, QString fingerPrint)
+{
+    m_peers->add(Peer{addr, fingerPrint, 0});
+    m_peers->setConnected(addr, true);
 }
 

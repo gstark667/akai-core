@@ -27,6 +27,22 @@ Peer Peers::get(Address addr, QString fingerPrint)
     throw PeerException();
 }
 
+void Peers::add(Peer peer)
+{
+    m_peers[peer.addr] = peer;
+    write();
+}
+
+bool Peers::isConnected(Address addr)
+{
+    return m_peers[addr].connected;
+}
+
+void Peers::setConnected(Address addr, bool connected)
+{
+    m_peers[addr].connected = connected;
+}
+
 void Peers::read()
 {
     QFile file(QStandardPaths::writableLocation(QStandardPaths::DataLocation) + "/peers.json");
@@ -68,5 +84,6 @@ void Peers::write()
         return;
     }
     file.write(doc.toJson());
+    file.close();
 }
 

@@ -24,9 +24,8 @@ struct DummyRequest
     bool isEmpty = true;
 };
 
-class RequestException: public QException
-{
-};
+class RequestException: public QException {};
+class MessageException: public QException {};
 
 class Request: public QObject
 {
@@ -73,7 +72,9 @@ public:
     void addPeer(Address addr, QString fingerPrint);
     void removePeer(Address addr);
 
+    QString getFingerPrint();
     QString getFingerPrint(Address addr);
+    bool isConnected(Address addr);
     QString encrypt(QString message, Address addr);
     QString decrypt(QString message, Address addr);
 
@@ -86,6 +87,8 @@ public slots:
     void makeRequest(Address addr, bool outgoing, QString message);
     void addRequest(Request *request);
     void removeRequest(Request *request);
+
+    void connectPeer(Address addr, QString fingerPrint);
 };
 
 #endif

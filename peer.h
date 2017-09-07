@@ -12,6 +12,7 @@ struct Peer
     Address addr;
     QString fingerPrint;
     quint16 nonce;
+    bool connected = false;
 };
 
 class Peers
@@ -25,6 +26,9 @@ public:
 
     QList<Address> list() { return m_peers.keys(); };
     Peer get(Address addr, QString fingerPrint="");
+    void add(Peer peer);
+    bool isConnected(Address addr);
+    void setConnected(Address addr, bool connected);
 
 private:
     void read();
