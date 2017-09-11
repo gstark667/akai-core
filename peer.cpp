@@ -57,9 +57,9 @@ void Peers::read()
     for (int i = 0; i < peerArray.size(); ++i)
     {
         QJsonObject peer = peerArray[i].toObject();
-        std::cout << "Got Peer: " << peer["host"].toString().toStdString() << std::endl;
-        Address addr = {QHostAddress(peer["host"].toString()), peer["port"].toString().toUShort()};
-        m_peers[addr] = (Peer{addr, peer["fingerPrint"].toString(), peer["nonce"].toString().toUShort()});
+        std::cout << "Got Peer: " << peer["host"].toString().toStdString() << ":" << peer["port"].toInt() << std::endl;
+        Address addr = {QHostAddress(peer["host"].toString()), (quint16)peer["port"].toInt()};
+        m_peers[addr] = (Peer{addr, peer["fingerPrint"].toString(), (quint16)peer["nonce"].toInt()});
     }
 }
 

@@ -14,10 +14,9 @@ Request::Request(Address addr, bool outgoing, QString message, RequestHandler *h
     m_args = front.trimmed().split(" ");
     if (!back.isNull())
         m_args.append(back);
-    for (int i = 0; i < m_args.size(); ++i)
-        std::cout << m_args.at(i).toStdString() << std::endl;
     m_handler = handler;
     m_callback = callback;
+
 }
 
 bool Request::isAcknowledge()
@@ -51,7 +50,7 @@ void Request::process()
         if (!m_handler->isConnected(m_addr))
         {
             m_handler->connectPeer(m_addr, m_args.at(1));
-            responses.append(new Request(m_addr, true, "0:register:" + m_handler->getFingerPrint(), m_handler));
+            responses.append(new Request(m_addr, true, m_nonce + ":ack:" + m_handler->getFingerPrint(), m_handler));
         }
     }
     else if (getType().compare("key") == 0 && m_args.size() == 3)
@@ -152,8 +151,8 @@ void RequestHandler::readDatagrams()
         m_sock.readDatagram(datagram.data(), datagram.size(), &senderAddr, &senderPort);
         Address addr = {senderAddr, senderPort};
         QString message = QString(datagram.data());
-        std::cout << "got message: " << message.toStdString() << std::endl;
-        if (message.indexOf("0:register:") != 0)
+        std::cout << "got message: " << message.toStdString() << ": from: " << senderPort << std::endl;
+        if (message.indexOf("0:") != 0)
             message = decrypt(message, addr);
         Request *request = new Request(addr, false, message, this);
         if (request->isAcknowledge())
@@ -188,8 +187,8 @@ void RequestHandler::sendRequest(Request *request)
     QString message = request->getMessage();
     Address address = request->getAddress();
     bool connected = m_peers->isConnected(address);
-    bool isRegister = message.indexOf("0:register:") == 0;
-    std::cout << "sending message: " << message.toStdString() << std::endl;
+    bool isRegister = message.indexOf("0:") == 0;
+    std::cout << "sending message: " << message.toStdString() << ": to: " << address.port  << std::endl;
     if (!isRegister && connected)
         message = m_crypto->encrypt(m_peers->get(request->getAddress()).fingerPrint, message);
     if (connected || isRegister)
