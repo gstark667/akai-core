@@ -74,6 +74,9 @@ public:
     void addPeer(Address addr, QString fingerPrint);
     void removePeer(Address addr);
 
+    QString getKey(QString fingerPrint) { return m_crypto->getKey(fingerPrint); };
+    void addKey(QString fingerPrint, QString text) { m_crypto->addKey(fingerPrint, text); };
+
     QString getFingerPrint();
     QString getFingerPrint(Address addr);
     bool isConnected(Address addr);

@@ -71,6 +71,51 @@ Crypto::~Crypto()
     gpgme_release(m_ctx);
 }
 
+char *copy(QString string)
+{
+    char *data = (char*)malloc(sizeof(char) * string.size() + 1);
+    memcpy(data, string.toStdString().c_str(), string.size() + 1);
+    return data;
+}
+
+QString Crypto::getKey(QString fingerPrint)
+{
+    gpgme_data_t out;
+    gpgme_error_t error = gpgme_data_new(&out);
+    if (error != GPG_ERR_NO_ERROR)
+        throw CryptoException(error);
+    error = gpgme_op_export(m_ctx, fingerPrint.toStdString().c_str(), 0, out);
+    if (error != GPG_ERR_NO_ERROR)
+        throw CryptoException(error);
+
+    char buffer[2048];
+    QString output = "";
+    gpgme_data_seek(out, 0, SEEK_SET);
+    while (gpgme_data_read(out, buffer, 2048) > 0)
+    {
+        output += buffer;
+    }
+    gpgme_data_release(out);
+
+    return output.trimmed();
+}
+
+QString Crypto::addKey(QString fingerPrint, QString text)
+{
+    gpgme_error_t error;
+    gpgme_data_t in;
+    char *data = copy(text);
+    error = gpgme_data_new_from_mem(&in, data, text.size(), false);
+    if (error != GPG_ERR_NO_ERROR) throw CryptoException(error);
+    error = gpgme_op_import(m_ctx, in);
+    if (error != GPG_ERR_NO_ERROR) throw CryptoException(error);
+    gpgme_import_result_t result = gpgme_op_import_result(m_ctx);
+    std::cout << "imported: " << result->imports[0].fpr << std::endl;
+    gpgme_data_release(in);
+    free(data);
+    return "";
+}
+
 QString Crypto::encrypt(QString receiver, QString text)
 {
     std::cout << "encrypting for: " << receiver.toStdString() << ": " << text.toStdString() << std::endl;
@@ -82,8 +127,7 @@ QString Crypto::encrypt(QString receiver, QString text)
     receiverKey[1] = 0;
 
     // we need to copy the string into a new pointer so it doesn't get deleted
-    char *data = (char*)malloc(sizeof(char) * text.size() + 1);
-    memcpy(data, text.toStdString().c_str(), text.size() + 1);
+    char *data = copy(text);
 
     gpgme_data_t in, out;
     error = gpgme_data_new_from_mem(&in, data, text.size(), false);
@@ -106,20 +150,18 @@ QString Crypto::encrypt(QString receiver, QString text)
     }
     gpgme_data_release(in);
     gpgme_data_release(out);
+    free(data);
     return output;
 }
 
 QString Crypto::decrypt(QString &sender, QString crypt)
 {
     // we need to copy the string into a new pointer so it doesn't get deleted
-    char *data = (char*)malloc(sizeof(char) * crypt.size() + 1);
-    memcpy(data, crypt.toStdString().c_str(), crypt.size() + 1);
-
     gpgme_error_t error;
     gpgme_data_t in, out;
+    char *data = copy(crypt);
     error = gpgme_data_new_from_mem(&in, data, crypt.size(), false);
-    if (error != GPG_ERR_NO_ERROR)
-        throw CryptoException(error);
+    if (error != GPG_ERR_NO_ERROR) throw CryptoException(error);
     error = gpgme_data_new(&out);
     if (error != GPG_ERR_NO_ERROR)
         throw CryptoException(error);
@@ -137,6 +179,7 @@ QString Crypto::decrypt(QString &sender, QString crypt)
     }
     gpgme_data_release(in);
     gpgme_data_release(out);
+    free(data);
 
     // TODO this probably needs to be freed
     gpgme_verify_result_t result = gpgme_op_verify_result(m_ctx);

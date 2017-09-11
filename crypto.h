@@ -28,6 +28,9 @@ public:
 
     QString getFingerPrint() { return m_fingerPrint; };
 
+    QString getKey(QString fingerPrint);
+    QString addKey(QString fingerPrint, QString text);
+
     QString encrypt(QString receiver, QString text);
     QString decrypt(QString &sender, QString crypt);
 };

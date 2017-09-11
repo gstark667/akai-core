@@ -16,7 +16,6 @@ Request::Request(Address addr, bool outgoing, QString message, RequestHandler *h
         m_args.append(back);
     m_handler = handler;
     m_callback = callback;
-
 }
 
 bool Request::isAcknowledge()
@@ -32,9 +31,10 @@ QString Request::getType()
 void Request::acknowledge(Request *response)
 {
     std::cout << "got the ack" << std::endl;
-    if (getType() == "register" && response->countArgs() == 2)
+    if (getType() == "register" && response->countArgs() == 3)
     {
         m_handler->connectPeer(m_addr, response->getArg(1));
+        m_handler->addKey(response->getArg(1), response->getArg(2));
     }
     m_handler->removeRequest(this);
 }
@@ -49,12 +49,12 @@ void Request::process()
 
     std::cout << "processing" << std::endl;
     QList<Request*> responses;
-    if (getType().compare("register") == 0 && m_args.size() == 2)
+    if (getType().compare("register") == 0 && m_args.size() == 3)
     {
         if (!m_handler->isConnected(m_addr))
         {
             m_handler->connectPeer(m_addr, m_args.at(1));
-            responses.append(new Request(m_addr, true, m_nonce + ":ack:" + m_handler->getFingerPrint(), m_handler));
+            responses.append(new Request(m_addr, true, m_nonce + ":ack " + m_handler->getFingerPrint() + ":" + m_handler->getKey(m_handler->getFingerPrint()), m_handler));
         }
     }
     else if (getType().compare("key") == 0 && m_args.size() == 3)
@@ -101,7 +101,8 @@ RequestHandler::RequestHandler(QObject *parent): QObject(parent)
     std::cout << m_settings.value("port").toString().toStdString() << std::endl;
     foreach (Address addr, m_peers->list())
     {
-        makeRequest(addr, true, "register:" + m_crypto->getFingerPrint());
+        makeRequest(addr, true, "register " + getFingerPrint() + ":" + getKey(getFingerPrint()));
+        std::cout << "Key: " << m_crypto->getKey(m_peers->get(addr).fingerPrint).toStdString() << std::endl;
     }
 }
 
