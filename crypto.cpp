@@ -12,11 +12,7 @@ Crypto::Crypto(QString fingerPrint)
 {
     m_fingerPrint = fingerPrint;
 
-    char buf[2048];
-    size_t read_bytes;
-    int tmp;
-    gpgme_error_t err;
-
+    gpgme_error_t error;
     gpgme_engine_info_t enginfo;
 
     setlocale (LC_ALL, "");
@@ -24,53 +20,49 @@ Crypto::Crypto(QString fingerPrint)
     printf("version=%s\n",version);
     gpgme_set_locale(NULL, LC_CTYPE, setlocale (LC_CTYPE, NULL));
 
-    err = gpgme_engine_check_version(GPGME_PROTOCOL_OpenPGP);
-    if(err != GPG_ERR_NO_ERROR) printf("Got error");
+    error = gpgme_engine_check_version(GPGME_PROTOCOL_OpenPGP);
+    if(error != GPG_ERR_NO_ERROR) printf("Got error");
 
     char *protocol = (char *) gpgme_get_protocol_name(GPGME_PROTOCOL_OpenPGP);
     printf("Protocol name: %s\n",protocol);
 
-    err = gpgme_get_engine_info(&enginfo);
-    if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
+    error = gpgme_get_engine_info(&enginfo);
+    if(error != GPG_ERR_NO_ERROR) throw CryptoException(error);
     printf("file=%s, home=%s\n",enginfo->file_name,enginfo->home_dir);
 
-    err = gpgme_new(&m_ctx);
-    if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
+    error = gpgme_new(&m_ctx);
+    if(error != GPG_ERR_NO_ERROR) throw CryptoException(error);
 
-    err = gpgme_set_protocol(m_ctx,GPGME_PROTOCOL_OpenPGP);
-    if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
+    error = gpgme_set_protocol(m_ctx,GPGME_PROTOCOL_OpenPGP);
+    if(error != GPG_ERR_NO_ERROR) throw CryptoException(error);
 
-    err = gpgme_ctx_set_engine_info (m_ctx, GPGME_PROTOCOL_OpenPGP, enginfo->file_name,enginfo->home_dir);
-    if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
+    error = gpgme_ctx_set_engine_info (m_ctx, GPGME_PROTOCOL_OpenPGP, enginfo->file_name,enginfo->home_dir);
+    if(error != GPG_ERR_NO_ERROR) throw CryptoException(error);
 
     gpgme_set_armor(m_ctx, 1);
 
-    err = gpgme_data_new(&m_data);
-    if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
+    error = gpgme_data_new(&m_data);
+    if(error != GPG_ERR_NO_ERROR) throw CryptoException(error);
 
-    err = gpgme_data_set_encoding(m_data,GPGME_DATA_ENCODING_ARMOR);
-    if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
+    error = gpgme_data_set_encoding(m_data,GPGME_DATA_ENCODING_ARMOR);
+    if(error != GPG_ERR_NO_ERROR) throw CryptoException(error);
 
-    tmp = gpgme_data_get_encoding(m_data);
-    if(tmp == GPGME_DATA_ENCODING_ARMOR) {
-       printf("encode ok\n");
-    } else {
-       printf("encode broken\n");
-    }
+    error = gpgme_data_get_encoding(m_data);
+    if(error != GPGME_DATA_ENCODING_ARMOR) throw CryptoException(error);
 
     if (m_fingerPrint == "")
     {
         std::cout << "generating new key" << std::endl;
-        err = gpgme_op_createkey(m_ctx, "asdfasdf", NULL, 0, 0, NULL, GPGME_CREATE_NOEXPIRE | GPGME_CREATE_ENCR | GPGME_CREATE_SIGN | GPGME_CREATE_NOPASSWD | GPGME_CREATE_FORCE);
-        if(err != GPG_ERR_NO_ERROR) throw CryptoException(err);
+        error = gpgme_op_createkey(m_ctx, "asdfasdf", NULL, 0, 0, NULL, GPGME_CREATE_NOEXPIRE | GPGME_CREATE_ENCR | GPGME_CREATE_SIGN | GPGME_CREATE_NOPASSWD | GPGME_CREATE_FORCE);
+        if(error != GPG_ERR_NO_ERROR) throw CryptoException(error);
         gpgme_genkey_result_t genkey = gpgme_op_genkey_result(m_ctx);
         m_fingerPrint = genkey->fpr;
         std::cout << "new fingerprint: " << m_fingerPrint.toStdString() << std::endl;
     }
 
-    err = gpgme_get_key(m_ctx, m_fingerPrint.toStdString().c_str(), &m_key, true);
-    if (err != GPG_ERR_NO_ERROR)
-        throw CryptoException(err);
+    error = gpgme_get_key(m_ctx, m_fingerPrint.toStdString().c_str(), &m_key, true);
+    if (error != GPG_ERR_NO_ERROR)
+        throw CryptoException(error);
 }
 
 Crypto::~Crypto()

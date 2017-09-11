@@ -21,9 +21,11 @@ Peers::~Peers()
 Peer Peers::get(Address addr, QString fingerPrint)
 {
     if (m_peers.contains(addr))
+    {
         if (fingerPrint != "" && m_peers[addr].fingerPrint != fingerPrint)
             throw PeerException();
         return m_peers[addr];
+    }
     throw PeerException();
 }
 
@@ -56,8 +58,8 @@ void Peers::read()
     {
         QJsonObject peer = peerArray[i].toObject();
         std::cout << "Got Peer: " << peer["host"].toString().toStdString() << std::endl;
-        Address addr = {QHostAddress(peer["host"].toString()), peer["port"].toInt()};
-        m_peers[addr] = (Peer{addr, peer["fingerPrint"].toString(), peer["nonce"].toInt()});
+        Address addr = {QHostAddress(peer["host"].toString()), peer["port"].toString().toUShort()};
+        m_peers[addr] = (Peer{addr, peer["fingerPrint"].toString(), peer["nonce"].toString().toUShort()});
     }
 }
 

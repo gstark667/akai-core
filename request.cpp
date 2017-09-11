@@ -14,7 +14,7 @@ Request::Request(Address addr, bool outgoing, QString message, RequestHandler *h
     m_args = front.trimmed().split(" ");
     if (!back.isNull())
         m_args.append(back);
-    for (size_t i = 0; i < m_args.size(); ++i)
+    for (int i = 0; i < m_args.size(); ++i)
         std::cout << m_args.at(i).toStdString() << std::endl;
     m_handler = handler;
     m_callback = callback;
@@ -59,7 +59,7 @@ void Request::process()
         std::cout << "importing key: " << m_args.at(1).toStdString() << ": " << m_args.at(2).toStdString() << std::endl;
     }
 
-    for (size_t i = 0; i < responses.size(); ++i)
+    for (int i = 0; i < responses.size(); ++i)
     {
         responses.at(i)->process();
     }
@@ -72,7 +72,7 @@ QString Request::getMessage()
     message += QString::number(m_nonce) + ":";
     if (m_args.size() == 1)
         return message + m_args.at(0);
-    for (size_t i = 0; i < m_args.size() - 1; ++i)
+    for (int i = 0; i < m_args.size() - 1; ++i)
         message += m_args.at(i) + " ";
     message = message.trimmed();
     return message + ":" + m_args.at(m_args.size() - 1);
@@ -174,7 +174,7 @@ void RequestHandler::readDatagrams()
 
 Request *RequestHandler::findRequest(DummyRequest dumbReq)
 {
-    for (size_t i = 0; i < m_requests.size(); ++i)
+    for (int i = 0; i < m_requests.size(); ++i)
     {
         Request *request = m_requests.at(i);
         if (dumbReq.addr == request->getAddress() && dumbReq.nonce == m_peers->get(request->getAddress()).nonce)
