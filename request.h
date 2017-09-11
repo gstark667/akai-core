@@ -44,6 +44,8 @@ public:
     bool isAcknowledge();
     QString getType();
     QString getMessage();
+    QString getArg(int index) { return m_args.at(index); };
+    int countArgs() { return m_args.size(); };
 
     Address getAddress() { return m_addr; };
     bool isOutgoing() { return m_outgoing; };

@@ -32,6 +32,10 @@ QString Request::getType()
 void Request::acknowledge(Request *response)
 {
     std::cout << "got the ack" << std::endl;
+    if (getType() == "register" && response->countArgs() == 2)
+    {
+        m_handler->connectPeer(m_addr, response->getArg(1));
+    }
     m_handler->removeRequest(this);
 }
 
@@ -220,6 +224,7 @@ void RequestHandler::removeRequest(Request *request)
 
 void RequestHandler::connectPeer(Address addr, QString fingerPrint)
 {
+    std::cout << "connecting peer: " << fingerPrint.toStdString() << std::endl;
     m_peers->add(Peer{addr, fingerPrint, 0});
     m_peers->setConnected(addr, true);
 }
