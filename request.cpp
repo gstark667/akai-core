@@ -49,7 +49,7 @@ void Request::process()
 
     std::cout << "processing" << std::endl;
     QList<Request*> responses;
-    if (getType().compare("register") == 0 && m_args.size() == 3)
+    if (getType() == "register" && m_args.size() == 3)
     {
         if (!m_handler->isConnected(m_addr))
         {
@@ -57,15 +57,31 @@ void Request::process()
             responses.append(new Request(m_addr, true, m_nonce + ":ack " + m_handler->getFingerPrint() + ":" + m_handler->getKey(m_handler->getFingerPrint()), m_handler));
         }
     }
-    else if (getType().compare("key") == 0 && m_args.size() == 3)
+    else if (getType() == "ping" && m_args.size() == 2)
     {
-        std::cout << "importing key: " << m_args.at(1).toStdString() << ": " << m_args.at(2).toStdString() << std::endl;
+        std::cout << "pinging: " << m_args.at(1).toStdString() << std::endl;
+        if (m_handler->hasLocalKey(m_args.at(1)))
+            responses.append(new Request(m_addr, true, m_nonce + ":ack", m_handler));
+        else
+        {
+            responses.append(new Request(m_addr, true, m_nonce + ":dck", m_handler));
+            /*foreach (Address addr, m_peers->list())
+            {
+                responses.append(new Request(m_addr, true, m_nonce + ":ping", m_handler));
+                std::cout << "asking for ping: " << addr.host.toStdString() << std::endl;
+            }*/
+        }
     }
 
     for (int i = 0; i < responses.size(); ++i)
     {
         responses.at(i)->process();
     }
+
+    Request *callback = m_handler->findRequest(m_callback);
+    if (callback != nullptr)
+        QMetaObject::invokeMethod(callback, "process", Qt::QueuedConnection);
+        
     m_handler->removeRequest(this);
 }
 
@@ -206,7 +222,7 @@ void RequestHandler::makeRequest(Address addr, bool outgoing, QString message)
 {
     Request *request;
     if (outgoing)
-        request = new Request(addr, outgoing, m_peers->get(addr).nonce + ":" + message, this);
+        request = new Request(addr, outgoing, getNonce(addr) + ":" + message, this);
     else
         request = new Request(addr, outgoing, message, this);
     QMetaObject::invokeMethod(request, "process", Qt::QueuedConnection);

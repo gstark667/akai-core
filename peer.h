@@ -29,6 +29,7 @@ public:
     void add(Peer peer);
     bool isConnected(Address addr);
     void setConnected(Address addr, bool connected);
+    quint16 getNonce(Address addr);
 
 private:
     void read();

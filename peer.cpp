@@ -35,6 +35,13 @@ void Peers::add(Peer peer)
     write();
 }
 
+quint16 Peers::getNonce(Address addr)
+{
+    if (m_peers.contains(addr))
+        return m_peers[addr].nonce++;
+    throw PeerException();
+}
+
 bool Peers::isConnected(Address addr)
 {
     return m_peers[addr].connected;

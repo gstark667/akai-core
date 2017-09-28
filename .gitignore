@@ -1,6 +1,7 @@
-akai-whale
-moc_*
+libakai.a
+objects
 *.o
+moc_*
 *.swp
 Makefile
 .qmake.stash

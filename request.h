@@ -8,7 +8,6 @@
 #include <QtCore/QPair>
 #include <QtCore/QMetaObject>
 #include <QtNetwork/QUdpSocket>
-#include <QtCrypto/QtCrypto>
 #include <gpgme.h>
 
 #include "address.h"
@@ -65,6 +64,7 @@ private:
     QSettings m_settings;
     QUdpSocket m_sock;
     QList<Request*> m_requests;
+    QStringList m_localKeys;
     Peers *m_peers;
     Crypto *m_crypto;
 
@@ -72,6 +72,8 @@ public:
     RequestHandler(QObject *parent);
     ~RequestHandler();
     void addPeer(Address addr, QString fingerPrint);
+    QList<Address> listPeers() { return m_peers->list(); };
+    quint16 getNonce(Address addr) { return m_peers->getNonce(addr); };
     void removePeer(Address addr);
 
     QString getKey(QString fingerPrint) { return m_crypto->getKey(fingerPrint); };
@@ -82,6 +84,9 @@ public:
     bool isConnected(Address addr);
     QString encrypt(QString message, Address addr);
     QString decrypt(QString message, Address addr);
+
+    void addLocalKey(QString fingerPrint) { m_localKeys.append(fingerPrint); };
+    bool hasLocalKey(QString fingerPrint) { return m_localKeys.contains(fingerPrint); };
 
 private slots:
     void readDatagrams();
