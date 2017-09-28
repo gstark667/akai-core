@@ -6,11 +6,13 @@ find_package(Gpgmepp REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
+include_directories(include)
+
 set(SOURCES
-    address.cpp
-    crypto.cpp
-    peer.cpp
-    request.cpp
+    src/address.cpp
+    src/crypto.cpp
+    src/peer.cpp
+    src/request.cpp
 )
 
 add_library(akai SHARED ${SOURCES})
