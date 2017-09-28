@@ -242,7 +242,7 @@ void RequestHandler::removeRequest(Request *request)
 void RequestHandler::connectPeer(Address addr, QString fingerPrint)
 {
     std::cout << "connecting peer: " << fingerPrint.toStdString() << std::endl;
-    m_peers->add(Peer{addr, fingerPrint, 0});
+    m_peers->add(Peer{addr, fingerPrint, 0, false});
     m_peers->setConnected(addr, true);
 }
 

@@ -1,4 +1,4 @@
-#include <QApplication>
+#include <QtWidgets/QApplication>
 #include <QtCore/QSettings>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QStandardPaths>

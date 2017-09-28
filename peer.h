@@ -7,13 +7,13 @@
 
 class PeerException: public QException {};
 
-struct Peer
+typedef struct
 {
     Address addr;
     QString fingerPrint;
     quint16 nonce;
-    bool connected = false;
-};
+    bool connected;
+} Peer;
 
 class Peers
 {

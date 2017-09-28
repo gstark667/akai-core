@@ -16,12 +16,12 @@
 
 class RequestHandler;
 
-struct DummyRequest
+typedef struct
 {
     Address addr;
     quint16 nonce;
-    bool isEmpty = true;
-};
+    bool isEmpty;
+} DummyRequest;
 
 class RequestException: public QException {};
 class MessageException: public QException {};
