@@ -7,8 +7,10 @@
 #include <QtCore/QMap>
 #include <QtCore/QPair>
 #include <QtCore/QMetaObject>
+#include <QtCore/QTimer>
 #include <QtNetwork/QUdpSocket>
 #include <gpgme.h>
+#include <vector>
 
 #include "address.h"
 #include "crypto.h"
@@ -20,7 +22,7 @@ typedef struct
 {
     Address addr;
     quint16 nonce;
-    bool isEmpty;
+    QString lookup;
 } DummyRequest;
 
 class RequestException: public QException {};
@@ -35,16 +37,21 @@ private:
     Address m_addr;
     bool m_outgoing;
     quint16 m_nonce;
-    DummyRequest m_callback;
+    QTimer *m_timer = nullptr;
+    int m_count = -1;
     bool m_error = false;
+    QString m_response = "";
+    std::vector<DummyRequest> m_callbacks;
+    std::vector<DummyRequest> m_responses;
 
 public:
-    Request(Address addr, bool outgoing, QString message, RequestHandler *handler, DummyRequest callback=DummyRequest{});
+    Request(Address addr, bool outgoing, QString message, RequestHandler *handler);
     bool isAcknowledge();
     QString getType();
     QString getMessage();
     QString getArg(int index) { return m_args.at(index); };
     int countArgs() { return m_args.size(); };
+    bool looksUp(QString lookup);
 
     Address getAddress() { return m_addr; };
     bool isOutgoing() { return m_outgoing; };
@@ -55,6 +62,9 @@ public:
 public slots:
     void acknowledge(Request *response);
     void process();
+    void timeout();
+    void addCallback(DummyRequest callback) { m_callbacks.push_back(callback); };
+    void addResponse(DummyRequest response) { m_responses.push_back(response); };
 };
 
 class RequestHandler: public QObject
@@ -94,7 +104,7 @@ private slots:
 public slots:
     Request *findRequest(DummyRequest dumbReq);
     void sendRequest(Request *request);
-    void makeRequest(Address addr, bool outgoing, QString message);
+    void makeRequest(Address addr, bool outgoing, QString message, QList<DummyRequest> callbacks);
     void addRequest(Request *request);
     void removeRequest(Request *request);
 

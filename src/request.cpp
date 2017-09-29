@@ -3,7 +3,7 @@
 #include <iostream>
 
 
-Request::Request(Address addr, bool outgoing, QString message, RequestHandler *handler, DummyRequest callback)
+Request::Request(Address addr, bool outgoing, QString message, RequestHandler *handler)
 {
     QString nonce = message.section(":", 0, 0);
     QString front = message.section(':', 1, 1);
@@ -15,7 +15,14 @@ Request::Request(Address addr, bool outgoing, QString message, RequestHandler *h
     if (!back.isNull())
         m_args.append(back);
     m_handler = handler;
-    m_callback = callback;
+    addResponse(DummyRequest{m_addr, m_nonce, ""});
+
+    if (m_outgoing)
+    {
+        m_timer = new QTimer(this);
+        connect(m_timer, SIGNAL(timeout()), this, SLOT(timeout()));
+        m_timer->start(3000);
+    }
 }
 
 bool Request::isAcknowledge()
@@ -48,41 +55,71 @@ void Request::process()
     }
 
     std::cout << "processing" << std::endl;
-    QList<Request*> responses;
     if (getType() == "register" && m_args.size() == 3)
     {
         if (!m_handler->isConnected(m_addr))
         {
             m_handler->connectPeer(m_addr, m_args.at(1));
-            responses.append(new Request(m_addr, true, m_nonce + ":ack " + m_handler->getFingerPrint() + ":" + m_handler->getKey(m_handler->getFingerPrint()), m_handler));
+            m_response = m_handler->getFingerPrint() + ":" + m_handler->getKey(m_handler->getFingerPrint());
+            //responses.append(new Request(m_addr, true, m_nonce + ":ack " + m_handler->getFingerPrint() + ":" + m_handler->getKey(m_handler->getFingerPrint()), m_handler));
         }
     }
     else if (getType() == "ping" && m_args.size() == 2)
     {
         std::cout << "pinging: " << m_args.at(1).toStdString() << std::endl;
         if (m_handler->hasLocalKey(m_args.at(1)))
-            responses.append(new Request(m_addr, true, m_nonce + ":ack", m_handler));
+            m_error = false;
+            //responses.append(new Request(m_addr, true, m_nonce + ":ack", m_handler));
         else
         {
-            responses.append(new Request(m_addr, true, m_nonce + ":dck", m_handler));
-            /*foreach (Address addr, m_peers->list())
+            Request *lookup = m_handler->findRequest(DummyRequest{Address{}, 0, m_args.at(1)});
+            if (lookup != nullptr)
             {
-                responses.append(new Request(m_addr, true, m_nonce + ":ping", m_handler));
-                std::cout << "asking for ping: " << addr.host.toStdString() << std::endl;
-            }*/
+                lookup->addResponse(DummyRequest{m_addr, m_nonce, ""});
+                delete this;
+                return;
+            }
+            else
+            {
+                QList<DummyRequest> callbacks;
+                callbacks.append(DummyRequest{m_addr, m_nonce, ""});
+                foreach (Address addr, m_handler->listPeers())
+                {
+                    m_count += 1;
+                    m_handler->makeRequest(addr, true, "ping:" + m_args.at(1), callbacks);
+                }
+            }
+            m_error = true;
         }
     }
 
-    for (int i = 0; i < responses.size(); ++i)
+    QString respMsg;
+    if (m_error)
+        respMsg = ":dck " + m_response;
+    else
+        respMsg = ":ack " + m_response;
+    for (int i = 0; i < m_responses.size(); ++i)
     {
-        responses.at(i)->process();
+        DummyRequest dumbResp = m_responses.at(i);
+        Request *response = new Request(dumbResp.addr, true, dumbResp.nonce + respMsg, m_handler);
+        response->process();
     }
 
-    Request *callback = m_handler->findRequest(m_callback);
-    if (callback != nullptr)
-        QMetaObject::invokeMethod(callback, "process", Qt::QueuedConnection);
-        
+    for (int i = 0; i < m_callbacks.size(); ++i)
+    {
+        Request *callback = m_handler->findRequest(m_callbacks[i]);
+        if (callback != nullptr)
+            QMetaObject::invokeMethod(callback, "process", Qt::QueuedConnection);
+    }
+
     m_handler->removeRequest(this);
+}
+
+void Request::timeout()
+{
+    std::cout << "timeout" << std::endl;
+    m_handler->removeRequest(this);
+    delete this;
 }
 
 QString Request::getMessage()
@@ -97,9 +134,14 @@ QString Request::getMessage()
     return message + ":" + m_args.at(m_args.size() - 1);
 }
 
+bool Request::looksUp(QString lookup)
+{
+    return m_args.at(0) == "ping" && m_args.at(1) == lookup;
+}
+
 DummyRequest Request::toDummy()
 {
-    return DummyRequest{m_addr, m_nonce, false};
+    return DummyRequest{m_addr, m_nonce, ""};
 }
 
 
@@ -117,7 +159,7 @@ RequestHandler::RequestHandler(QObject *parent): QObject(parent)
     std::cout << m_settings.value("port").toString().toStdString() << std::endl;
     foreach (Address addr, m_peers->list())
     {
-        makeRequest(addr, true, "register " + getFingerPrint() + ":" + getKey(getFingerPrint()));
+        makeRequest(addr, true, "register " + getFingerPrint() + ":" + getKey(getFingerPrint()), QList<DummyRequest>());
         std::cout << "Key: " << m_crypto->getKey(m_peers->get(addr).fingerPrint).toStdString() << std::endl;
     }
 }
@@ -194,12 +236,21 @@ void RequestHandler::readDatagrams()
 
 Request *RequestHandler::findRequest(DummyRequest dumbReq)
 {
+    if (dumbReq.lookup != "")
+    {
+        for (int i = 0; i < m_requests.size(); ++i)
+        {
+            if (m_requests.at(i)->looksUp(dumbReq.lookup))
+                return m_requests.at(i);
+        }
+    }
     for (int i = 0; i < m_requests.size(); ++i)
     {
         Request *request = m_requests.at(i);
         if (dumbReq.addr == request->getAddress() && dumbReq.nonce == m_peers->get(request->getAddress()).nonce)
             return request;
     }
+
     return nullptr;
 }
 
@@ -218,13 +269,17 @@ void RequestHandler::sendRequest(Request *request)
         throw RequestException();
 }
 
-void RequestHandler::makeRequest(Address addr, bool outgoing, QString message)
+void RequestHandler::makeRequest(Address addr, bool outgoing, QString message, QList<DummyRequest> callbacks)
 {
     Request *request;
     if (outgoing)
         request = new Request(addr, outgoing, getNonce(addr) + ":" + message, this);
     else
         request = new Request(addr, outgoing, message, this);
+    foreach (DummyRequest callback, callbacks)
+    {
+        request->addCallback(callback);
+    }
     QMetaObject::invokeMethod(request, "process", Qt::QueuedConnection);
     this->addRequest(request);
 }
